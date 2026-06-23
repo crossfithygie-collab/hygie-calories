@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hygie Calories">
+  <link rel="manifest" href="manifest.json">
+  <title>Hygie — Calorie Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    html,body{margin:0;padding:0;}
+    body{min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;
+      background:#0b0f14;background-image:radial-gradient(circle at 50% -12%,#1b2531 0%,#0b0f14 62%);
+      padding:32px 0;font-family:'Archivo',system-ui,sans-serif;}
+    .sa::-webkit-scrollbar{width:0;height:0;}
+    .sa{scrollbar-width:none;}
+    button,input{font-family:'Archivo',system-ui,sans-serif;}
+    @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+    .sheet-in{animation:slideUp 280ms ease-out;}
+    @media(max-width:480px){
+      body{padding:0;align-items:flex-start;justify-content:flex-start;background:#0c0d0f;}
+      .phone-frame{width:100vw!important;height:100dvh!important;border-radius:0!important;padding:0!important;box-shadow:none!important;}
+      .phone-inner{border-radius:0!important;}
+      .phone-statusbar{display:none!important;}
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script async src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script id="app-jsx" type="text/jsx-src">
+/* @jsx React.createElement */
+/* ── CONSTANTS ─────────────────────────────────────────────────────── */
+const FOODS = [
+  {name:"Flocons d'avoine",   srv:"60 g",       kcal:233, prot:8,  carbs:40, fat:4,  fiber:6,  cat:"Petit-déj"},
+  {name:"Skyr nature",        srv:"150 g",      kcal:100, prot:17, carbs:6,  fat:0,  fiber:0,  cat:"Petit-déj"},
+  {name:"Banane",             srv:"1 pièce",    kcal:105, prot:1,  carbs:27, fat:0,  fiber:3,  cat:"Petit-déj"},
+  {name:"Oeufs",              srv:"2 pièces",   kcal:156, prot:13, carbs:1,  fat:11, fiber:0,  cat:"Petit-déj"},
+  {name:"Pain complet",       srv:"2 tranches", kcal:160, prot:8,  carbs:30, fat:2,  fiber:5,  cat:"Petit-déj"},
+  {name:"Poulet grillé",      srv:"150 g",      kcal:248, prot:46, carbs:0,  fat:5,  fiber:0,  cat:"Déjeuner"},
+  {name:"Riz blanc",          srv:"200 g",      kcal:260, prot:5,  carbs:56, fat:1,  fiber:1,  cat:"Déjeuner"},
+  {name:"Patate douce",       srv:"200 g",      kcal:180, prot:4,  carbs:41, fat:0,  fiber:6,  cat:"Déjeuner"},
+  {name:"Brocoli",            srv:"150 g",      kcal:51,  prot:4,  carbs:10, fat:0,  fiber:4,  cat:"Déjeuner"},
+  {name:"Saumon",             srv:"150 g",      kcal:280, prot:30, carbs:0,  fat:18, fiber:0,  cat:"Dîner"},
+  {name:"Pâtes complètes",    srv:"200 g",      kcal:280, prot:12, carbs:56, fat:2,  fiber:8,  cat:"Dîner"},
+  {name:"Boeuf haché 5%",     srv:"150 g",      kcal:218, prot:32, carbs:0,  fat:9,  fiber:0,  cat:"Dîner"},
+  {name:"Lentilles",          srv:"200 g",      kcal:232, prot:18, carbs:40, fat:1,  fiber:16, cat:"Dîner"},
+  {name:"Shaker whey",        srv:"1 dose",     kcal:120, prot:24, carbs:3,  fat:2,  fiber:0,  cat:"Collation"},
+  {name:"Amandes",            srv:"30 g",       kcal:174, prot:6,  carbs:6,  fat:15, fiber:4,  cat:"Collation"},
+  {name:"Pomme",              srv:"1 pièce",    kcal:95,  prot:0,  carbs:25, fat:0,  fiber:4,  cat:"Collation"},
+  {name:"Fromage blanc 0%",   srv:"200 g",      kcal:114, prot:16, carbs:8,  fat:0,  fiber:0,  cat:"Collation"},
+];
+const CATS    = ["Petit-déj","Déjeuner","Dîner","Collation"];
+const MACROS  = [
+  {key:"prot",  label:"Protéines", short:"P", unit:"g"},
+  {key:"carbs", label:"Glucides",  short:"G", unit:"g"},
+  {key:"fat",   label:"Lipides",   short:"L", unit:"g"},
+  {key:"fiber", label:"Fibres",    short:"F", unit:"g"},
+];
+const DAYS_SHORT  = ["DIM","LUN","MAR","MER","JEU","VEN","SAM"];
+const DAYS_FULL   = ["DIMANCHE","LUNDI","MARDI","MERCREDI","JEUDI","VENDREDI","SAMEDI"];
+const MONTHS_FR   = ["JANVIER","FÉVRIER","MARS","AVRIL","MAI","JUIN","JUILLET","AOÛT","SEPTEMBRE","OCTOBRE","NOVEMBRE","DÉCEMBRE"];
+const WEEK_DAYS   = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+const KEYS_D      = ["kcal","prot","carbs","fat","fiber"];
+const PATTERN     = ["on","on","off","on","on","off","off"]; // Mon=on, …, Sun=off
+const REF_GOALS   = { on:{kcal:2600,prot:190,carbs:290,fat:70,fiber:35}, off:{kcal:2200,prot:175,carbs:170,fat:72,fiber:30} };
+const CIRC        = 2*Math.PI*64; // ring circumference
+
+/* ── DATE ───────────────────────────────────────────────────────────── */
+const TODAY        = new Date();
+const TODAY_MONTH  = TODAY.getDate()-1;                              // 0-indexed day in month
+const todayDow     = TODAY.getDay();                                 // 0=Sun…6=Sat
+const mondayOff    = todayDow===0 ? 6 : todayDow-1;                 // 0=Mon…6=Sun
+const WEEK_START   = Math.max(0, TODAY_MONTH - mondayOff);
+const DAYS_IN_MON  = new Date(TODAY.getFullYear(), TODAY.getMonth()+1, 0).getDate();
+const DATE_LABEL   = `${DAYS_SHORT[todayDow]} ${TODAY.getDate()} ${MONTHS_FR[TODAY.getMonth()]} ${TODAY.getFullYear()}`;
+const MONTH_LABEL  = `${MONTHS_FR[TODAY.getMonth()]} ${TODAY.getFullYear()}`;
+
+/* Month day-of-week offset for grid (Mon=0) */
+const firstDow     = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1).getDay();
+const GRID_OFFSET  = firstDow===0 ? 6 : firstDow-1;
+
+/* Historical per-day data for the current month */
+const frac = n => Math.abs(Math.sin(n)*43758.5453) % 1;
+const DAY_DATA = Array.from({length:DAYS_IN_MON}, (_,i) => {
+  if (i >= TODAY_MONTH) return null;
+  const dt   = PATTERN[(GRID_OFFSET+i)%7];
+  const gref = REF_GOALS[dt];
+  const q    = 0.67 + 0.30*frac(i*3.1+0.7);
+  const c    = {};
+  KEYS_D.forEach((k,ki) => { c[k] = Math.max(0, Math.round(gref[k]*q*(1+0.08*(frac(i*4.1+ki*1.7)-0.5)*2))); });
+  return { dayType:dt, c };
+});
+
+/* ── PURE HELPERS ───────────────────────────────────────────────────── */
+const scoreOf     = (c,t) => !t ? 0 : Math.max(0, Math.round(100*(1-Math.abs(c-t)/t)));
+const statusColor = (c,t) => { const p=c/t; return (p>=0.9&&p<=1.1) ? "#00E08A" : p<0.9 ? "#FFCE2E" : "#FF3B5C"; };
+const scoreColor  = s => s>=85 ? "#00E08A" : s>=70 ? "#FFCE2E" : "#FF3B5C";
+const heatColor   = s => s==null ? "rgba(255,255,255,0.05)" : s>=90 ? "#00E08A" : s>=80 ? "#5BD39A" : s>=70 ? "#FFCE2E" : s>=50 ? "#FF8A3D" : "#FF3B5C";
+const scoreLabel  = s => s>=85 ? "Excellent — RX" : s>=70 ? "Solide, continue" : s>=50 ? "À ajuster" : "Hors cible";
+
+function computeTip(t,g,dt) {
+  const h=19, protGap=Math.max(0,g.prot-t.prot), kcalGap=Math.max(0,g.kcal-t.kcal);
+  if(h>=18){
+    if(t.fat>g.fat*1.05&&t.prot<g.prot*0.85) return `Déjà ${t.fat} g de lipides mais seulement ${t.prot} g de protéines. Ce soir, vise maigre et protéiné — je te propose un dîner ?`;
+    if(t.prot<g.prot*0.7)  return `Il te manque ${protGap} g de protéines avant la fin de journée. Un skyr ou un shaker au dîner ? Tu veux des idées ?`;
+    if(t.kcal<g.kcal*0.6)  return `Tu n'es qu'à ${t.kcal} kcal, encore ${kcalGap} à couvrir : ne saute pas le dîner. On cale un repas ensemble ?`;
+  }
+  if(t.kcal>g.kcal*1.05)       return `Tu as dépassé ta cible de ${t.kcal-g.kcal} kcal. On allège le prochain repas — tu veux un plan ?`;
+  if(t.fat>g.fat*1.1)           return `Tes lipides sont hauts (${t.fat}/${g.fat} g). Mise sur protéines + légumes au prochain repas. Je détaille ?`;
+  if(dt==="on"&&t.carbs<g.carbs*0.5) return `Jour ON : tes glucides sont bas (${t.carbs}/${g.carbs} g). Recharge pour performer demain. Tu veux des sources ?`;
+  if(t.prot<g.prot*0.4)         return `Protéines à la traîne (${t.prot}/${g.prot} g). On les répartit sur tes prochains repas ?`;
+  return null;
+}
+
+function computeWeightAdvice(weighIns, profile) {
+  if(!profile||!profile.goal) return null;
+  const ws=(weighIns||[]).filter(x=>typeof x.w==="number");
+  if(ws.length<2) return null;
+  const first=ws[0].w, last=ws[ws.length-1].w;
+  const change=+(last-first).toFixed(1), weeks=Math.max(1,ws.length-1), pw=change/weeks;
+  const gl=profile.goal;
+  if(gl==="perte de poids"){
+    if(pw>-0.15)  return {text:`Tes pesées stagnent (${first}→${last} kg sur ${weeks} sem.) alors que tu vises une perte de poids. Je propose de réduire d'environ 200 kcal/j. On applique ?`,delta:-200};
+    if(pw<-1.0)   return {text:`Tu perds vite (${change} kg en ${weeks} sem.). Pour préserver le muscle, on remonte de ~150 kcal/j ?`,delta:150};
+  } else if(gl==="prise de masse"){
+    if(pw<0.1)    return {text:`Ta prise de masse stagne (${first}→${last} kg). On ajoute ~200 kcal/j pour relancer ?`,delta:200};
+  } else {
+    if(pw>0.4)    return {text:`Tu prends du poids (${change} kg) alors que tu vises ${gl}. On réduit de ~150 kcal/j ?`,delta:-150};
+    if(pw<-0.4)   return {text:`Tu perds du poids (${change} kg) alors que tu vises ${gl}. On ajoute ~150 kcal/j ?`,delta:150};
+  }
+  return null;
+}
+
+const QUESTIONS = [
+  {key:"goal",     q:"Quel est ton objectif principal ?",  type:"options", options:[{label:"Perte de poids",value:"perte de poids"},{label:"Silhouette athlétique",value:"silhouette athlétique"},{label:"Maintien",value:"maintien"},{label:"Prise de masse",value:"prise de masse"}]},
+  {key:"sex",      q:"Tu es ?",                           type:"options", options:[{label:"Femme",value:"femme"},{label:"Homme",value:"homme"},{label:"Autre",value:"autre"}]},
+  {key:"age",      q:"Quel âge as-tu ?",                  type:"number",  unit:"ans"},
+  {key:"weight",   q:"Ton poids actuel ?",                type:"number",  unit:"kg"},
+  {key:"height",   q:"Ta taille ?",                       type:"number",  unit:"cm"},
+  {key:"trainDays",q:"Combien de séances par semaine ?",  type:"options", options:[{label:"1–2",value:"1-2"},{label:"3–4",value:"3-4"},{label:"5–6",value:"5-6"},{label:"7+",value:"7+"}]},
+];
+const nextQ = profile => QUESTIONS.find(q => (profile||{})[q.key]==null || (profile||{})[q.key]==="") || null;
+
+const loadLS = (k,def) => { try{const r=localStorage.getItem(k); if(r) return JSON.parse(r)||def;}catch(e){} return def; };
+const saveLS = (k,v)   => { try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} };
+
+/* ── SCANNER OVERLAY ─────────────────────────────────────────────────── */
+function ScannerOverlay({cat, onClose, onAdd, onSaveLib}) {
+  const [phase, setPhase]     = React.useState("scan");
+  const [product, setProduct] = React.useState(null);
+  const [errMsg, setErrMsg]   = React.useState("");
+  const qrRef    = React.useRef(null);
+  const cancelRef= React.useRef(false);
+
+  React.useEffect(() => {
+    if (phase !== "scan") return;
+    cancelRef.current = false;
+    if (!window.Html5Qrcode) { setErrMsg("Scanner non disponible"); setPhase("error"); return; }
+    const qr = new window.Html5Qrcode("qr-reader-div");
+    qrRef.current = qr;
+    qr.start(
+      {facingMode:"environment"},
+      {fps:10, qrbox:{width:240, height:100}},
+      async (code) => {
+        if (qrRef.current) { qrRef.current.stop().catch(()=>{}); qrRef.current = null; }
+        if (cancelRef.current) return;
+        setPhase("loading");
+        try {
+          const r = await fetch("https://world.openfoodfacts.org/api/v0/product/"+code+".json");
+          const d = await r.json();
+          if (cancelRef.current) return;
+          if (d.status !== 1 || !d.product) { setErrMsg("Produit introuvable — essaie un autre produit"); setPhase("error"); return; }
+          const p = d.product, n = p.nutriments || {};
+          setProduct({
+            id:"off_"+code, barcode:code, source:"off",
+            name: p.product_name_fr || p.product_name || "Produit scanné",
+            brand: ((p.brands||"").split(",")[0]||"").trim(),
+            srv:"100 g",
+            kcal:Math.round(n["energy-kcal_100g"]||0),
+            prot:Math.round(n.proteins_100g||0),
+            carbs:Math.round(n.carbohydrates_100g||0),
+            fat:Math.round(n.fat_100g||0),
+            fiber:Math.round(n.fiber_100g||0),
+          });
+          setPhase("result");
+        } catch(e) {
+          if (!cancelRef.current) { setErrMsg("Erreur réseau — vérifie ta connexion"); setPhase("error"); }
+        }
+      },
+      ()=>{}
+    ).catch(e => {
+      if (!cancelRef.current) { setErrMsg("Caméra inaccessible — autorise l'accès dans Réglages > Confidentialité > Caméra"); setPhase("error"); }
+    });
+    return () => { cancelRef.current = true; if (qrRef.current) { qrRef.current.stop().catch(()=>{}); qrRef.current = null; } };
+  }, [phase]);
+
+  const rescan = () => { setPhase("scan"); setProduct(null); setErrMsg(""); };
+  const btnScan = {width:"100%",border:"none",background:"#00E08A",color:"#000",borderRadius:"999px",padding:"16px",font:"700 12px/1 'Archivo'",letterSpacing:"0.08em",cursor:"pointer",marginBottom:"10px"};
+  const btnSec  = {width:"100%",border:"1px solid rgba(0,224,138,0.3)",background:"rgba(0,224,138,0.08)",color:"#00E08A",borderRadius:"999px",padding:"14px",font:"700 11px/1 'Archivo'",letterSpacing:"0.08em",cursor:"pointer",marginBottom:"10px"};
+  const btnGhost= {width:"100%",border:"1px solid rgba(255,255,255,0.14)",background:"transparent",color:"rgba(255,255,255,0.6)",borderRadius:"999px",padding:"13px",font:"700 10px/1 'Archivo'",letterSpacing:"0.08em",cursor:"pointer"};
+
+  return (
+    <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(8,10,14,0.96)",zIndex:40,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+      <div onClick={e=>e.stopPropagation()} className="sheet-in" style={{background:"#161c25",borderRadius:"28px 28px 0 0",maxHeight:"92%",display:"flex",flexDirection:"column"}}>
+        <div style={{flexShrink:0,padding:"14px 20px 14px",borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
+          <div style={{width:"38px",height:"4px",borderRadius:"999px",background:"rgba(255,255,255,0.16)",margin:"0 auto 14px"}}/>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{font:"800 18px/1 'Archivo'",color:"#F3F4F6"}}>Scanner un produit</div>
+            <button onClick={onClose} style={{width:"34px",height:"34px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.14)",background:"transparent",cursor:"pointer",color:"rgba(255,255,255,0.7)",font:"700 14px/1 'Archivo'"}}>✕</button>
+          </div>
+          <div style={{marginTop:"8px",font:"400 11px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.35)"}}>AJOUTER À · {(cat||"").toUpperCase()}</div>
+        </div>
+        <div className="sa" style={{flex:1,overflowY:"auto",padding:"20px"}}>
+          {phase==="scan" && (
+            <div>
+              <div id="qr-reader-div" style={{width:"100%",borderRadius:"14px",overflow:"hidden",background:"#0a0b0c",minHeight:"220px"}}></div>
+              <div style={{marginTop:"14px",textAlign:"center",color:"rgba(255,255,255,0.4)",font:"400 12px/1.5 'Archivo'"}}>Pointe la caméra vers le code-barres du produit</div>
+            </div>
+          )}
+          {phase==="loading" && (
+            <div style={{padding:"60px 0",textAlign:"center",color:"rgba(255,255,255,0.5)",font:"400 14px/1.4 'Archivo'"}}>Recherche du produit…</div>
+          )}
+          {phase==="result" && product && (
+            <div>
+              <div style={{background:"#1b232e",borderRadius:"18px",padding:"20px",marginBottom:"16px"}}>
+                {product.brand && <div style={{font:"700 9px/1 'Archivo'",letterSpacing:"0.14em",color:"#00E08A",marginBottom:"6px"}}>{product.brand.toUpperCase()}</div>}
+                <div style={{font:"700 17px/1.2 'Archivo'",color:"#F3F4F6"}}>{product.name}</div>
+                <div style={{font:"400 10px/1 'Archivo'",color:"rgba(255,255,255,0.35)",marginTop:"3px"}}>{product.srv} · Open Food Facts</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"5px",marginTop:"16px"}}>
+                  {[{l:"KCAL",v:product.kcal},{l:"PROT",v:product.prot+"g"},{l:"GLUC",v:product.carbs+"g"},{l:"LIP",v:product.fat+"g"},{l:"FIB",v:product.fiber+"g"}].map(x=>(
+                    <div key={x.l} style={{textAlign:"center",background:"rgba(255,255,255,0.06)",borderRadius:"9px",padding:"10px 3px"}}>
+                      <div style={{font:"700 12px/1 'Archivo'",color:"#F3F4F6"}}>{x.v}</div>
+                      <div style={{font:"700 7px/1 'Archivo'",letterSpacing:"0.1em",color:"#8C939D",marginTop:"4px"}}>{x.l}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button style={btnScan} onClick={()=>{ onAdd(product); }}>AJOUTER AU JOURNAL</button>
+              <button style={btnSec}  onClick={()=>{ onSaveLib(product); onAdd(product); }}>SAUVEGARDER DANS MA BIBLIO + AJOUTER</button>
+              <button style={btnGhost} onClick={rescan}>SCANNER UN AUTRE PRODUIT</button>
+            </div>
+          )}
+          {phase==="error" && (
+            <div style={{padding:"30px 0",textAlign:"center"}}>
+              <div style={{color:"#FF3B5C",font:"400 13px/1.5 'Archivo'",marginBottom:"20px"}}>{errMsg}</div>
+              <button style={{...btnGhost,width:"auto",padding:"13px 24px"}} onClick={rescan}>Réessayer</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── APP ─────────────────────────────────────────────────────────────── */
+function App() {
+  const initWeighIns = loadLS("hygie_weighins_v1",[{t:"S-3",w:80.1},{t:"S-2",w:79.9},{t:"S-1",w:79.8},{t:"Auj.",w:79.8}]);
+  const [S, _set] = React.useState(() => ({
+    tab:"today", dayType:"on", scoreTab:"day", editGoal:"on",
+    pickerOpen:false, pickerCat:"Déjeuner", pickerTab:"aliments", detailIdx:null,
+    scannerOpen:false,
+    lib:loadLS("hygie_lib_v1",[]),
+    goals: JSON.parse(JSON.stringify(REF_GOALS)),
+    log:[
+      {id:1,cat:"Petit-déj",name:"Flocons d'avoine",kcal:233,prot:8,carbs:40,fat:4,fiber:6},
+      {id:2,cat:"Petit-déj",name:"Skyr nature",      kcal:100,prot:17,carbs:6, fat:0,fiber:0},
+      {id:3,cat:"Petit-déj",name:"Banane",           kcal:105,prot:1, carbs:27,fat:0,fiber:3},
+      {id:4,cat:"Déjeuner", name:"Poulet grillé",    kcal:248,prot:46,carbs:0, fat:5,fiber:0},
+      {id:5,cat:"Déjeuner", name:"Riz blanc",        kcal:260,prot:5, carbs:56,fat:1,fiber:1},
+      {id:6,cat:"Déjeuner", name:"Brocoli",          kcal:51, prot:4, carbs:10,fat:0,fiber:4},
+    ],
+    nextId:7, messages:[], chatInput:"", chatLoading:false,
+    chatOpen:false, lastTipText:"", profile:loadLS("hygie_coach_v1",{}),
+    chatExpanded:false, viewStart:0, historyOpen:false,
+    weighIns:initWeighIns,
+    newWeight: initWeighIns[initWeighIns.length-1]?.w ?? 80,
+    pendingAdjust:null, adviceHandledCount:0,
+  }));
+  const setState = p => _set(prev => ({...prev,...(typeof p==="function"?p(prev):p)}));
+
+  const chatScrollRef = React.useRef(null);
+  React.useEffect(() => {
+    if(S.chatOpen && chatScrollRef.current){
+      const el=chatScrollRef.current;
+      requestAnimationFrame(()=>{ el.scrollTop=el.scrollHeight; });
+    }
+  },[S.messages.length, S.chatLoading, S.chatOpen, S.chatExpanded]);
+
+  /* ── COMPUTED ── */
+  const goal   = S.goals[S.dayType];
+  const totals = React.useMemo(()=>{
+    const t={kcal:0,prot:0,carbs:0,fat:0,fiber:0};
+    S.log.forEach(it=>{t.kcal+=it.kcal;t.prot+=it.prot;t.carbs+=it.carbs;t.fat+=it.fat;t.fiber+=it.fiber;});
+    return t;
+  },[S.log]);
+
+  const dScore = React.useMemo(()=>{
+    const g=S.goals[S.dayType];
+    return Math.round(KEYS_D.map(k=>scoreOf(totals[k]??0,g[k]??1)).reduce((a,b)=>a+b,0)/KEYS_D.length);
+  },[totals,S.dayType,S.goals]);
+
+  const scoreForIdx = React.useCallback(idx=>{
+    const dd = idx===TODAY_MONTH ? {dayType:S.dayType,c:totals} : DAY_DATA[idx];
+    if(!dd) return null;
+    const g=S.goals[dd.dayType];
+    return Math.round(KEYS_D.map(k=>scoreOf(dd.c[k],g[k])).reduce((a,b)=>a+b,0)/KEYS_D.length);
+  },[S.dayType,S.goals,totals]);
+
+  /* Week/month scores */
+  const weekScores  = Array.from({length:7},(_,i)=>scoreForIdx(WEEK_START+i));
+  const wDone       = weekScores.filter(v=>v!=null);
+  const weekAvg     = wDone.length ? Math.round(wDone.reduce((a,b)=>a+b,0)/wDone.length) : 0;
+  const monthScores = Array.from({length:DAYS_IN_MON},(_,i)=>scoreForIdx(i));
+  const mDone       = monthScores.filter(v=>v!=null);
+  const monthAvg    = mDone.length ? Math.round(mDone.reduce((a,b)=>a+b,0)/mDone.length) : 0;
+
+  /* Streak */
+  let streak=0;
+  for(let i=TODAY_MONTH-1;i>=0;i--){const s=scoreForIdx(i);if(s!=null&&s>=70)streak++;else break;}
+  const last7=[]; for(let i=Math.max(0,TODAY_MONTH-7);i<TODAY_MONTH;i++){const s=scoreForIdx(i);if(s!=null)last7.push(s);}
+  const avg7=last7.length?Math.round(last7.reduce((a,b)=>a+b,0)/last7.length):0;
+
+  /* Weight */
+  const ws=S.weighIns||[];
+  const lastW=ws.length?ws[ws.length-1].w:"—";
+  const wChange=ws.length>1?+(lastW-ws[0].w).toFixed(1):0;
+  const wChangeColor=wChange<0?"#00E08A":wChange>0?"#FF8A3D":"#9aa1ab";
+
+  /* Coach */
+  const onboardQ     = nextQ(S.profile);
+  const coachTip     = computeTip(totals,goal,S.dayType);
+  const wAdviceCheck = S.weighIns.length>S.adviceHandledCount ? computeWeightAdvice(S.weighIns,S.profile) : null;
+  const proactiveText= onboardQ ? null : (wAdviceCheck?wAdviceCheck.text:coachTip);
+  const tipIsNew     = !!(proactiveText && proactiveText!==S.lastTipText);
+  const sessionMsgs  = S.messages.slice(S.viewStart);
+  const P            = S.profile||{};
+  const profLine     = Object.keys(P).length>0
+    ? `Profil : objectif ${P.goal||"?"}, ${P.sex||"?"}, ${P.age||"?"} ans, ${P.weight||"?"} kg, ${P.height||"?"} cm, ${P.trainDays||"?"} séances/sem.`
+    : "Profil : non renseigné.";
+
+  const profileChips=[];
+  if(P.goal)      profileChips.push(P.goal[0].toUpperCase()+P.goal.slice(1));
+  if(P.sex)       profileChips.push(P.sex[0].toUpperCase()+P.sex.slice(1));
+  if(P.age)       profileChips.push(P.age+" ans");
+  if(P.weight)    profileChips.push(P.weight+" kg");
+  if(P.height)    profileChips.push(P.height+" cm");
+  if(P.trainDays) profileChips.push(String(P.trainDays).replace("-","–")+" séances");
+  const optChips = (onboardQ&&onboardQ.type==="options") ? onboardQ.options : [];
+
+  /* ── HANDLERS ── */
+  function openChat(){
+    setState(s=>{
+      const base={chatOpen:true,historyOpen:false,viewStart:s.messages.length};
+      const nq=nextQ(s.profile);
+      if(nq){
+        if(s.messages.length===0) return{...base,viewStart:0,messages:[{role:"coach",text:"Salut ! Pour t'aider à atteindre ton objectif, j'ai quelques questions. "+nq.q}]};
+        const last=[...s.messages].reverse().find(m=>m.role==="coach");
+        if(!last||last.text!==nq.q) return{...base,messages:[...s.messages,{role:"coach",text:nq.q}]};
+        return{...base,viewStart:Math.max(0,s.messages.length-1)};
+      }
+      const wAdv=s.weighIns.length>s.adviceHandledCount?computeWeightAdvice(s.weighIns,s.profile):null;
+      if(wAdv) return{...base,messages:[...s.messages,{role:"coach",text:wAdv.text}],lastTipText:wAdv.text,pendingAdjust:wAdv.delta};
+      const tip=computeTip(totals,s.goals[s.dayType],s.dayType);
+      if(tip&&tip!==s.lastTipText) return{...base,messages:[...s.messages,{role:"coach",text:tip}],lastTipText:tip};
+      return base;
+    });
+  }
+
+  function answerProfile(key,value,label){
+    setState(s=>{
+      const profile={...s.profile,[key]:value};
+      saveLS("hygie_coach_v1",profile);
+      const msgs=[...s.messages,{role:"user",text:label}];
+      const nq=nextQ(profile);
+      if(nq) msgs.push({role:"coach",text:nq.q});
+      else   msgs.push({role:"coach",text:`Parfait, ton profil est en mémoire. Je cale mes conseils sur ton objectif "${profile.goal||""}". Pose-moi tes questions !`});
+      return{profile,messages:msgs,chatInput:""};
+    });
+  }
+
+  async function sendMessage(text){
+    const msg=(text||"").trim();
+    if(!msg||S.chatLoading) return;
+    const cq=nextQ(S.profile);
+    if(cq){
+      if(cq.type==="number"){const n=parseInt(msg.replace(/[^0-9]/g,""),10);if(n) answerProfile(cq.key,n,n+" "+cq.unit);}
+      return;
+    }
+    const g=S.goals[S.dayType], t=totals;
+    const prompt=`Tu es le coach nutrition de CrossFit Hygie (Seclin). Tu tutoies l'athlète, ton ton est motivant, chaleureux et direct, avec le vocabulaire CrossFit (WOD, RX, woder). Réponds en français, court (2 à 4 phrases), concret et actionnable. Pas d'emoji. Pose une question de suivi si pertinent. Fonde tes conseils sur le consensus scientifique (ISSN, ACSM, EFSA) : protéines 1,6–2,2 g/kg/j, glucides adaptés à la charge, lipides suffisants. Adapte à l'objectif de l'athlète.\n\n${profLine}\n\nJour ${S.dayType==="on"?"ON / entraînement":"OFF / repos"} — Calories : ${t.kcal}/${g.kcal} kcal · Protéines : ${t.prot}/${g.prot} g · Glucides : ${t.carbs}/${g.carbs} g · Lipides : ${t.fat}/${g.fat} g · Fibres : ${t.fiber}/${g.fiber} g · Score : ${dScore}%\n\nQuestion : ${msg}`;
+    setState(s=>({messages:[...s.messages,{role:"user",text:msg}],chatInput:"",chatLoading:true}));
+    try{
+      const res=await fetch("/api/coach",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
+      const data=await res.json();
+      setState(s=>({messages:[...s.messages,{role:"coach",text:data.reply||"Je n'ai pas pu répondre. Réessaie."}],chatLoading:false}));
+    }catch(e){
+      setState(s=>({messages:[...s.messages,{role:"coach",text:"Oups, je n'ai pas réussi à répondre. Réessaie dans un instant."}],chatLoading:false}));
+    }
+  }
+
+  function addToLib(prod) {
+    setState(s => {
+      if (s.lib.some(p => p.id === prod.id)) return s;
+      const lib = [...s.lib, {...prod}];
+      saveLS("hygie_lib_v1", lib);
+      return {lib};
+    });
+  }
+  function removeFromLib(id) {
+    setState(s => {
+      const lib = s.lib.filter(p => p.id !== id);
+      saveLS("hygie_lib_v1", lib);
+      return {lib};
+    });
+  }
+
+  function applyAdjust(delta){
+    if(delta==null) return;
+    setState(s=>{
+      const goals=JSON.parse(JSON.stringify(s.goals));
+      ["on","off"].forEach(d=>{goals[d].kcal=Math.max(1000,goals[d].kcal+delta);goals[d].carbs=Math.max(0,goals[d].carbs+Math.round(delta/4));});
+      const msgs=[...s.messages,{role:"coach",text:`C'est ajusté : ${delta>0?"+":""}${delta} kcal/j (ON ${goals.on.kcal} / OFF ${goals.off.kcal} kcal). Continue tes pesées, on réévalue dans 1–2 semaines.`}];
+      return{goals,messages:msgs,pendingAdjust:null,adviceHandledCount:s.weighIns.length};
+    });
+  }
+
+  /* ── SHARED STYLES ── */
+  const pill    = (active) => ({background:active?"#00E08A":"transparent",color:active?"#000":"rgba(255,255,255,0.55)"});
+  const cardDk  = {background:"#1b232e",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"18px",boxShadow:"0 2px 8px rgba(10,11,12,0.05)"};
+  const scoreTab= (active) => ({flex:1,border:"none",cursor:"pointer",borderRadius:"999px",padding:"10px 0",font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.1em",background:active?"#00E08A":"transparent",color:active?"#000":"rgba(255,255,255,0.5)",transition:"all 160ms"});
+  const segRow  = {display:"flex",background:"rgba(255,255,255,0.07)",borderRadius:"999px",padding:"4px",gap:"3px"};
+
+  /* ── RING helper ── */
+  const Ring = ({pct,color,size=150,sw=13,id,children}) => {
+    const r=size/2-sw/2-2, c2=2*Math.PI*r;
+    return (
+      <div style={{position:"relative",width:size,height:size}}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <defs>
+            <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={color} stopOpacity="0.5"/>
+              <stop offset="1" stopColor={color}/>
+            </linearGradient>
+          </defs>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw}/>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={`url(#${id})`} strokeWidth={sw}
+            strokeLinecap="round" strokeDasharray={c2.toFixed(1)}
+            strokeDashoffset={(c2*(1-Math.min(Math.max(pct,0),1))).toFixed(1)}
+            transform={`rotate(-90 ${size/2} ${size/2})`}
+            style={{transition:"stroke-dashoffset 500ms cubic-bezier(0.22,0.61,0.36,1)"}}/>
+        </svg>
+        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  /* ── RENDER TABS ── */
+  const calColor  = statusColor(totals.kcal,goal.kcal);
+  const dScColor  = scoreColor(dScore);
+  const rem       = goal.kcal - totals.kcal;
+
+  const renderToday = () => (
+    <div>
+      {/* Header */}
+      <div style={{background:"#1b232e",color:"#fff",padding:"14px 22px 30px",borderRadius:"0 0 30px 30px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.18em",color:"#00E08A"}}>{DATE_LABEL}</div>
+            <div style={{font:"800 24px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"-0.02em",marginTop:"6px"}}>Ton bilan</div>
+          </div>
+          <div style={{display:"flex",background:"rgba(255,255,255,0.08)",borderRadius:"999px",padding:"4px",gap:"2px"}}>
+            <button onClick={()=>setState({dayType:"on"})}  style={{border:"none",cursor:"pointer",borderRadius:"999px",padding:"8px 14px",font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.08em",transition:"all 180ms",...pill(S.dayType==="on")}}>JOUR ON</button>
+            <button onClick={()=>setState({dayType:"off"})} style={{border:"none",cursor:"pointer",borderRadius:"999px",padding:"8px 14px",font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.08em",transition:"all 180ms",...pill(S.dayType==="off")}}>JOUR OFF</button>
+          </div>
+        </div>
+        {/* Rings row */}
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"center",gap:"20px",marginTop:"22px"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"12px"}}>
+            <Ring pct={totals.kcal/goal.kcal} color={calColor} id="gcal">
+              <span style={{font:"500 34px/1 'Archivo',sans-serif"}}>{totals.kcal}</span>
+              <span style={{font:"400 10px/1 'Archivo',sans-serif",letterSpacing:"0.08em",color:"rgba(255,255,255,0.5)",marginTop:"5px"}}>/ {goal.kcal} kcal</span>
+            </Ring>
+            <span style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.55)"}}>CALORIES</span>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"12px"}}>
+            <Ring pct={dScore/100} color={dScColor} id="gscore">
+              <div style={{display:"flex",alignItems:"baseline",gap:"1px"}}>
+                <span style={{font:"500 40px/1 'Archivo',sans-serif",color:dScColor}}>{dScore}</span>
+                <span style={{font:"500 18px/1 'Archivo',sans-serif",color:dScColor,marginTop:"-10px"}}>%</span>
+              </div>
+            </Ring>
+            <span style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.55)"}}>SCORE</span>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"7px",marginTop:"18px"}}>
+          <span style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.14em",color:"rgba(255,255,255,0.4)"}}>{rem>=0?"RESTANTES":"AU-DESSUS"}</span>
+          <span style={{font:"600 13px/1 'Archivo',sans-serif",color:rem>=0?"#fff":"#00E08A"}}>{rem>=0?rem:("+"+Math.abs(rem))} kcal</span>
+        </div>
+      </div>
+
+      <div style={{padding:"18px 20px 24px"}}>
+        {/* Coach bar */}
+        <div onClick={openChat} style={{display:"flex",alignItems:"center",gap:"9px",background:"#1b232e",border:(onboardQ||tipIsNew)?"1px solid rgba(0,224,138,0.55)":"1px solid rgba(255,255,255,0.09)",borderRadius:"999px",padding:"8px 6px 8px 13px",marginBottom:"16px",cursor:"pointer"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00E08A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{flex:"none"}}><path d="M12 3l2.2 5.2L20 9l-4 3.8L17 18l-5-2.8L7 18l1-5.2L4 9l5.8-.8z"/></svg>
+          <span style={{flex:1,minWidth:0,color:(onboardQ||tipIsNew)?"#F3F4F6":"rgba(255,255,255,0.5)",font:"400 12px/1.3 'Archivo',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+            {onboardQ?"Ton coach a quelques questions pour toi…":tipIsNew?proactiveText:S.messages.length>0?"Reprendre avec ton coach…":"Demander un conseil au coach…"}
+          </span>
+          <span style={{width:"30px",height:"30px",borderRadius:"999px",background:"#00E08A",display:"flex",alignItems:"center",justifyContent:"center",flex:"none"}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </span>
+        </div>
+
+        {/* Macro bars */}
+        <div style={{...cardDk,padding:"18px 18px 8px"}}>
+          {MACROS.map(m=>{
+            const c=totals[m.key], tg=goal[m.key], pct=tg?Math.min(c/tg,1):0;
+            const col=statusColor(c,tg);
+            return (
+              <div key={m.key} style={{marginBottom:"18px"}}>
+                <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:"7px"}}>
+                  <span style={{font:"700 12px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.04em",color:"#F3F4F6"}}>{m.label}</span>
+                  <span style={{font:"700 12px/1 'Archivo',sans-serif",color:"#9aa1ab"}}>{c} / {tg} {m.unit}</span>
+                </div>
+                <div style={{height:"10px",borderRadius:"999px",background:"rgba(255,255,255,0.08)",overflow:"hidden"}}>
+                  <div style={{height:"100%",borderRadius:"999px",width:`${Math.round(pct*100)}%`,background:col,transition:"width 500ms cubic-bezier(0.22,0.61,0.36,1)"}}/>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Stat tiles */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px",marginTop:"14px"}}>
+          {[
+            {label:"SÉRIE",      value:streak, unit:"J", sub:"dans la cible",  valColor:"#00E08A"},
+            {label:"MOYENNE 7J", value:avg7,   unit:"%", sub:"de réussite",    valColor:"#F3F4F6"},
+            {label:"JOURS LOGGÉS",value:mDone.length,unit:"",sub:MONTHS_FR[TODAY.getMonth()].toLowerCase(),valColor:"#F3F4F6"},
+          ].map(s=>(
+            <div key={s.label} style={{background:"#1b232e",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"16px",padding:"14px 12px",boxShadow:"0 2px 8px rgba(10,11,12,0.05)"}}>
+              <div style={{font:"700 8px/1.3 'Archivo',sans-serif",letterSpacing:"0.1em",color:"#8C939D"}}>{s.label}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"2px",marginTop:"9px"}}>
+                <span style={{font:"500 26px/1 'Archivo',sans-serif",color:s.valColor}}>{s.value}</span>
+                <span style={{font:"700 12px/1 'Archivo',sans-serif",color:"#BFC4CB"}}>{s.unit}</span>
+              </div>
+              <div style={{font:"400 9px/1.3 'Archivo',sans-serif",color:"#BFC4CB",marginTop:"5px"}}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <button onClick={()=>setState({tab:"journal"})} style={{width:"100%",marginTop:"14px",border:"none",cursor:"pointer",background:"#00E08A",color:"#000",borderRadius:"999px",padding:"16px",font:"700 13px/1 'Archivo',sans-serif",letterSpacing:"0.1em",boxShadow:"0 10px 30px rgba(0,224,138,0.26)",transition:"background 180ms"}}>
+          AJOUTER UN REPAS
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderJournal = () => (
+    <div style={{padding:"18px 20px 24px"}}>
+      <div style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.18em",color:"#00E08A"}}>{DATE_LABEL}</div>
+      <div style={{font:"800 28px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"-0.02em",color:"#F3F4F6",marginTop:"6px"}}>Journal</div>
+      {/* Daily total card */}
+      <div style={{background:"#1b232e",borderRadius:"18px",padding:"16px 18px",marginTop:"16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.14em",color:"rgba(255,255,255,0.45)"}}>TOTAL DU JOUR</div>
+          <div style={{font:"800 26px/1 'Archivo'",marginTop:"6px",color:"#fff"}}>
+            {totals.kcal}<span style={{font:"400 13px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.4)"}}> / {goal.kcal} kcal</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:"14px"}}>
+          {MACROS.map(m=>(
+            <div key={m.key} style={{textAlign:"center"}}>
+              <div style={{font:"700 14px/1 'Archivo',sans-serif",color:statusColor(totals[m.key],goal[m.key])}}>{totals[m.key]}</div>
+              <div style={{font:"700 8px/1 'Archivo',sans-serif",letterSpacing:"0.1em",color:"rgba(255,255,255,0.4)",marginTop:"4px"}}>{m.short}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Meal groups */}
+      {CATS.map(cat=>{
+        const items=S.log.filter(x=>x.cat===cat);
+        const k=items.reduce((a,b)=>a+b.kcal,0);
+        return (
+          <div key={cat} style={{...cardDk,marginTop:"14px",overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:"1.5px solid rgba(255,255,255,0.08)"}}>
+              <div>
+                <div style={{font:"800 14px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.02em",color:"#F3F4F6"}}>{cat}</div>
+                <div style={{font:"700 10px/1 'Archivo',sans-serif",color:"#8C939D",marginTop:"4px"}}>
+                  {items.length ? `${k} kcal · ${items.length} aliment${items.length>1?"s":""}` : "Aucun aliment"}
+                </div>
+              </div>
+              <button onClick={()=>setState({pickerOpen:true,pickerCat:cat})} style={{display:"flex",alignItems:"center",gap:"6px",border:"1.5px solid #00E08A",background:"#1b232e",color:"#00E08A",borderRadius:"999px",padding:"7px 13px",cursor:"pointer",font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.08em"}}>+ AJOUTER</button>
+            </div>
+            {items.length===0
+              ? <div style={{padding:"16px",textAlign:"center",font:"400 12px/1.4 'Archivo'",color:"#BFC4CB"}}>Rien pour l'instant.</div>
+              : items.map(it=>(
+                <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{font:"600 14px/1.2 'Archivo'",color:"#F3F4F6"}}>{it.name}</div>
+                    <div style={{font:"400 11px/1.3 'Archivo',sans-serif",color:"#8C939D",marginTop:"3px"}}>P {it.prot} · G {it.carbs} · L {it.fat} · Fib {it.fiber}</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:"12px",flex:"none"}}>
+                    <span style={{font:"700 13px/1 'Archivo',sans-serif",color:"#F3F4F6"}}>{it.kcal}</span>
+                    <button onClick={()=>setState(s=>({log:s.log.filter(x=>x.id!==it.id)}))} style={{width:"26px",height:"26px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.12)",background:"#1b232e",color:"#BFC4CB",cursor:"pointer",font:"700 14px/1 'Archivo'"}}>−</button>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderScore = () => {
+    const monthHead=["L","M","M","J","V","S","D"];
+    return (
+      <div style={{padding:"18px 20px 24px"}}>
+        <div style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.18em",color:"#00E08A"}}>ATTEINTE DES OBJECTIFS</div>
+        <div style={{font:"800 28px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"-0.02em",color:"#F3F4F6",marginTop:"6px"}}>Score</div>
+        {/* Tabs */}
+        <div style={{...segRow,marginTop:"16px"}}>
+          {[["day","JOUR"],["week","SEMAINE"],["month","MOIS"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setState({scoreTab:v})} style={scoreTab(S.scoreTab===v)}>{l}</button>
+          ))}
+        </div>
+
+        {/* DAY */}
+        {S.scoreTab==="day"&&(
+          <div>
+            <div style={{background:"#1b232e",borderRadius:"22px",padding:"24px",marginTop:"16px",display:"flex",flexDirection:"column",alignItems:"center",color:"#fff"}}>
+              <div style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.45)"}}>{DATE_LABEL}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"3px",marginTop:"10px"}}>
+                <span style={{font:"400 64px/1 'Archivo',sans-serif",color:dScColor}}>{dScore}</span>
+                <span style={{font:"500 26px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.4)"}}>%</span>
+              </div>
+              <div style={{font:"800 13px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.04em",color:dScColor,marginTop:"8px"}}>{scoreLabel(dScore)}</div>
+            </div>
+            <div style={{...cardDk,padding:"8px 18px",marginTop:"14px"}}>
+              {[{label:"Calories",key:"kcal",unit:"kcal"},...MACROS.map(m=>({label:m.label,key:m.key,unit:m.unit}))].map(x=>{
+                const c=totals[x.key]??0, tg=goal[x.key]??1, sc=scoreOf(c,tg);
+                return (
+                  <div key={x.key} style={{padding:"13px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+                    <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:"7px"}}>
+                      <span style={{font:"700 12px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.03em",color:"#F3F4F6"}}>{x.label}</span>
+                      <span style={{font:"700 13px/1 'Archivo',sans-serif",color:scoreColor(sc)}}>{sc}%</span>
+                    </div>
+                    <div style={{height:"8px",borderRadius:"999px",background:"rgba(255,255,255,0.08)",overflow:"hidden"}}>
+                      <div style={{height:"100%",borderRadius:"999px",width:`${sc}%`,background:scoreColor(sc),transition:"width 500ms cubic-bezier(0.22,0.61,0.36,1)"}}/>
+                    </div>
+                    <div style={{font:"400 10px/1 'Archivo',sans-serif",color:"#BFC4CB",marginTop:"6px"}}>{c} / {tg} {x.unit}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* WEEK */}
+        {S.scoreTab==="week"&&(
+          <div>
+            <div style={{background:"#1b232e",borderRadius:"22px",padding:"22px 20px",marginTop:"16px",color:"#fff"}}>
+              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.45)"}}>MOYENNE — CETTE SEMAINE</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:"3px",marginTop:"8px"}}>
+                    <span style={{font:"400 50px/1 'Archivo',sans-serif",color:scoreColor(weekAvg)}}>{weekAvg}</span>
+                    <span style={{font:"500 22px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.4)"}}>%</span>
+                  </div>
+                </div>
+                <div style={{font:"700 10px/1.5 'Archivo',sans-serif",color:"rgba(255,255,255,0.5)",textAlign:"right"}}>{wDone.length} / 7 jours</div>
+              </div>
+              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:"7px",height:"130px",marginTop:"22px"}}>
+                {weekScores.map((s,i)=>{
+                  const mi=WEEK_START+i, isToday=mi===TODAY_MONTH, has=s!=null;
+                  return (
+                    <div key={i} onClick={has?()=>setState({detailIdx:mi}):undefined} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"8px",height:"100%",justifyContent:"flex-end",cursor:has?"pointer":"default"}}>
+                      <span style={{font:"700 9px/1 'Archivo',sans-serif",color:isToday?"#fff":"rgba(255,255,255,0.55)"}}>{has?s:"·"}</span>
+                      <div style={{width:"100%",borderRadius:"7px 7px 3px 3px",height:`${has?Math.max(8,Math.round(s/100*110)):6}px`,background:has?scoreColor(s):"rgba(255,255,255,0.10)",transition:"height 500ms cubic-bezier(0.22,0.61,0.36,1)"}}/>
+                      <span style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.06em",color:isToday?"#00E08A":"rgba(255,255,255,0.45)"}}>{WEEK_DAYS[i]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:"14px",marginTop:"14px",padding:"0 4px",flexWrap:"wrap"}}>
+              {[["#00E08A","≥85"],["#FFCE2E","70–84"],["#FF3B5C","<70"]].map(([c,l])=>(
+                <span key={l} style={{display:"flex",alignItems:"center",gap:"6px",font:"700 9px/1 'Archivo',sans-serif",color:"#9aa1ab"}}>
+                  <span style={{width:"9px",height:"9px",borderRadius:"3px",background:c}}/>
+                  {l}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MONTH */}
+        {S.scoreTab==="month"&&(
+          <div>
+            <div style={{background:"#1b232e",borderRadius:"22px",padding:"22px 20px",marginTop:"16px",color:"#fff"}}>
+              <div style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.45)"}}>MOYENNE — {MONTH_LABEL}</div>
+              <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginTop:"8px"}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:"3px"}}>
+                  <span style={{font:"400 50px/1 'Archivo',sans-serif",color:scoreColor(monthAvg)}}>{monthAvg}</span>
+                  <span style={{font:"500 22px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.4)"}}>%</span>
+                </div>
+                <div style={{font:"700 10px/1.5 'Archivo',sans-serif",color:"rgba(255,255,255,0.5)",textAlign:"right"}}>{mDone.length} / {DAYS_IN_MON} jours</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"5px",marginTop:"8px"}}>
+                {monthHead.map((w,i)=><div key={i} style={{textAlign:"center",font:"700 8px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.35)",paddingBottom:"3px"}}>{w}</div>)}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"5px",marginTop:"2px"}}>
+                {Array.from({length:GRID_OFFSET},(_,i)=><div key={"e"+i}/>)}
+                {monthScores.map((s,i)=>{
+                  const isToday=i===TODAY_MONTH, has=s!=null;
+                  return (
+                    <div key={i} onClick={has?()=>setState({detailIdx:i}):undefined} style={{aspectRatio:"1",borderRadius:"6px",background:heatColor(s),border:isToday?"2px solid #fff":"1px solid transparent",display:"flex",alignItems:"center",justifyContent:"center",font:"700 9px/1 'Archivo',sans-serif",color:has?"#fff":"rgba(255,255,255,0.35)",cursor:has?"pointer":"default"}}>
+                      {i+1}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:"12px",marginTop:"14px",padding:"0 4px",flexWrap:"wrap"}}>
+              {[["#00E08A","≥90"],["#FFCE2E","70–89"],["#FF3B5C","<70"]].map(([c,l])=>(
+                <span key={l} style={{display:"flex",alignItems:"center",gap:"6px",font:"700 9px/1 'Archivo',sans-serif",color:"#9aa1ab"}}>
+                  <span style={{width:"9px",height:"9px",borderRadius:"3px",background:c}}/>
+                  {l}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderObjectifs = () => {
+    const ed=S.editGoal, eg=S.goals[ed];
+    const kcalFromMacros=eg.prot*4+eg.carbs*4+eg.fat*9;
+    const bump=(d,k,delta)=>setState(s=>{const goals=JSON.parse(JSON.stringify(s.goals));goals[d][k]=Math.max(0,goals[d][k]+delta);return{goals};});
+    return (
+      <div style={{padding:"18px 20px 24px"}}>
+        <div style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.18em",color:"#00E08A"}}>PERSONNALISE TES CIBLES</div>
+        <div style={{font:"800 28px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"-0.02em",color:"#F3F4F6",marginTop:"6px"}}>Objectifs</div>
+        <p style={{font:"400 13px/1.5 'Archivo'",color:"#9aa1ab",margin:"10px 0 0"}}>Définis des cibles différentes selon que tu woders ou que tu récupères.</p>
+        <div style={{...segRow,marginTop:"18px"}}>
+          <button onClick={()=>setState({editGoal:"on"})}  style={{flex:1,border:"none",cursor:"pointer",borderRadius:"999px",padding:"11px 0",font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.08em",transition:"all 160ms",...pill(ed==="on")}}>JOUR ON · TRAIN</button>
+          <button onClick={()=>setState({editGoal:"off"})} style={{flex:1,border:"none",cursor:"pointer",borderRadius:"999px",padding:"11px 0",font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.08em",transition:"all 160ms",...pill(ed==="off")}}>JOUR OFF · REPOS</button>
+        </div>
+        <div style={{...cardDk,padding:"6px 18px",marginTop:"16px"}}>
+          {[{label:"Calories",key:"kcal",unit:"kcal",step:50},{label:"Protéines",key:"prot",unit:"g",step:5},{label:"Glucides",key:"carbs",unit:"g",step:5},{label:"Lipides",key:"fat",unit:"g",step:5},{label:"Fibres",key:"fiber",unit:"g",step:5}].map(f=>(
+            <div key={f.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"15px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+              <div>
+                <div style={{font:"700 13px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.03em",color:"#F3F4F6"}}>{f.label}</div>
+                <div style={{font:"400 10px/1 'Archivo',sans-serif",color:"#BFC4CB",marginTop:"5px"}}>PAS DE {f.step} {f.unit}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                <button onClick={()=>bump(ed,f.key,-f.step)} style={{width:"34px",height:"34px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.07)",background:"#1b232e",color:"#F3F4F6",cursor:"pointer",font:"700 20px/1 'Archivo'"}}>−</button>
+                <div style={{minWidth:"74px",textAlign:"center"}}>
+                  <span style={{font:"500 22px/1 'Archivo',sans-serif",color:"#F3F4F6"}}>{eg[f.key]}</span>
+                  <span style={{font:"400 11px/1 'Archivo',sans-serif",color:"#8C939D"}}> {f.unit}</span>
+                </div>
+                <button onClick={()=>bump(ed,f.key,f.step)} style={{width:"34px",height:"34px",borderRadius:"999px",border:"none",background:"#00E08A",color:"#000",cursor:"pointer",font:"700 20px/1 'Archivo'"}}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Weight tracker */}
+        <div style={{...cardDk,padding:"16px 18px",marginTop:"14px"}}>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+            <div>
+              <div style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.45)"}}>SUIVI DU POIDS</div>
+              <div style={{font:"500 26px/1 'Archivo',sans-serif",color:"#F3F4F6",marginTop:"9px"}}>{lastW}<span style={{font:"400 12px/1 'Archivo',sans-serif",color:"#9aa1ab"}}> kg</span></div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.1em",color:"rgba(255,255,255,0.4)"}}>SUR {Math.max(1,ws.length-1)} SEM.</div>
+              <div style={{font:"600 16px/1 'Archivo',sans-serif",color:wChangeColor,marginTop:"7px"}}>{wChange>0?"+":""}{wChange} kg</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:"7px",marginTop:"14px"}}>
+            {ws.map((x,i)=>(
+              <div key={i} style={{flex:1,textAlign:"center",background:"rgba(255,255,255,0.04)",borderRadius:"10px",padding:"9px 4px"}}>
+                <div style={{font:"500 14px/1 'Archivo',sans-serif",color:"#F3F4F6"}}>{x.w}</div>
+                <div style={{font:"400 8px/1 'Archivo',sans-serif",letterSpacing:"0.04em",color:"rgba(255,255,255,0.4)",marginTop:"5px"}}>{x.t}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:"15px",borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:"14px"}}>
+            <span style={{font:"700 11px/1 'Archivo',sans-serif",textTransform:"uppercase",letterSpacing:"0.03em",color:"#F3F4F6"}}>Nouvelle pesée</span>
+            <div style={{display:"flex",alignItems:"center",gap:"9px"}}>
+              <button onClick={()=>setState(s=>({newWeight:Math.max(30,+(s.newWeight-0.1).toFixed(1))}))} style={{width:"32px",height:"32px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"#F3F4F6",cursor:"pointer",font:"700 18px/1 'Archivo'"}}>−</button>
+              <span style={{minWidth:"62px",textAlign:"center",font:"600 16px/1 'Archivo',sans-serif",color:"#F3F4F6"}}>{S.newWeight}<span style={{font:"400 10px/1 'Archivo',sans-serif",color:"#9aa1ab"}}> kg</span></span>
+              <button onClick={()=>setState(s=>({newWeight:+(s.newWeight+0.1).toFixed(1)}))} style={{width:"32px",height:"32px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"#F3F4F6",cursor:"pointer",font:"700 18px/1 'Archivo'"}}>+</button>
+              <button onClick={()=>setState(s=>{
+                const w=+s.newWeight; if(!w) return{};
+                const wi=[...s.weighIns];
+                if(wi.length&&wi[wi.length-1].t==="Auj.") wi[wi.length-1]={t:"Auj.",w}; else wi.push({t:"Auj.",w});
+                saveLS("hygie_weighins_v1",wi);
+                return{weighIns:wi,adviceHandledCount:0};
+              })} style={{height:"32px",padding:"0 14px",borderRadius:"999px",border:"none",background:"#00E08A",color:"#000",cursor:"pointer",font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.06em"}}>PESER</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Macro kcal check */}
+        <div style={{background:"rgba(255,255,255,0.05)",borderRadius:"14px",padding:"14px 16px",marginTop:"14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{font:"700 10px/1.4 'Archivo',sans-serif",letterSpacing:"0.06em",color:"#9aa1ab"}}>CALORIES VIA MACROS<br/>(P×4 + G×4 + L×9)</span>
+          <span style={{font:"700 16px/1 'Archivo',sans-serif",color:Math.abs(kcalFromMacros-eg.kcal)<=120?"#1E9E5A":"#E8A33D"}}>{kcalFromMacros} kcal</span>
+        </div>
+      </div>
+    );
+  };
+
+  /* ── BOTTOM NAV ── */
+  const nc = k => S.tab===k?"#00E08A":"#8C939D";
+
+  /* ── OVERLAYS ── */
+  const renderFoodPicker = () => {
+    const addItem = f => setState(s=>({log:[...s.log,{id:s.nextId,cat:s.pickerCat,...f}],nextId:s.nextId+1,pickerOpen:false}));
+    const allFoods = FOODS.filter(f=>f.cat===S.pickerCat).concat(FOODS.filter(f=>f.cat!==S.pickerCat));
+    const tabBtn = active => ({flex:1,border:"none",cursor:"pointer",borderRadius:"999px",padding:"8px 0",font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.1em",transition:"all 160ms",background:active?"#00E08A":"transparent",color:active?"#000":"rgba(255,255,255,0.5)"});
+    return (
+      <div onClick={()=>setState({pickerOpen:false})} style={{position:"absolute",inset:0,background:"rgba(10,11,12,0.55)",zIndex:30,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+        <div onClick={e=>e.stopPropagation()} className="sheet-in" style={{background:"#1b232e",borderRadius:"28px 28px 0 0",maxHeight:"82%",display:"flex",flexDirection:"column"}}>
+          <div style={{flexShrink:0,padding:"14px 22px 12px",borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
+            <div style={{width:"38px",height:"4px",borderRadius:"999px",background:"rgba(255,255,255,0.16)",margin:"0 auto 14px"}}/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div>
+                <div style={{font:"700 10px/1 'Archivo',sans-serif",letterSpacing:"0.18em",color:"#00E08A"}}>AJOUTER À</div>
+                <div style={{font:"800 20px/1.1 'Archivo'",textTransform:"uppercase",letterSpacing:"-0.02em",color:"#F3F4F6",marginTop:"5px"}}>{S.pickerCat}</div>
+              </div>
+              <button onClick={()=>setState({pickerOpen:false})} style={{width:"36px",height:"36px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.07)",background:"#1b232e",cursor:"pointer",font:"700 15px/1 'Archivo'",color:"#9aa1ab"}}>✕</button>
+            </div>
+            {/* Tabs + scanner */}
+            <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"12px"}}>
+              <div style={{flex:1,display:"flex",background:"rgba(255,255,255,0.07)",borderRadius:"999px",padding:"3px",gap:"2px"}}>
+                <button style={tabBtn(S.pickerTab==="aliments")} onClick={()=>setState({pickerTab:"aliments"})}>ALIMENTS</button>
+                <button style={tabBtn(S.pickerTab==="lib")}      onClick={()=>setState({pickerTab:"lib"})}>MA BIBLIO {S.lib.length>0?"("+S.lib.length+")":""}</button>
+              </div>
+              <button onClick={()=>setState({scannerOpen:true})} title="Scanner un produit" style={{width:"38px",height:"38px",borderRadius:"999px",border:"none",background:"#00E08A",color:"#000",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flex:"none"}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+              </button>
+            </div>
+          </div>
+          <div className="sa" style={{flex:1,overflowY:"auto",padding:"6px 16px 28px"}}>
+            {S.pickerTab==="aliments" && allFoods.map((f,i)=>(
+              <button key={i} onClick={()=>addItem(f)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",background:"#1b232e",border:"none",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"13px 6px",cursor:"pointer",textAlign:"left"}}>
+                <div style={{minWidth:0}}>
+                  <div style={{font:"600 15px/1.2 'Archivo'",color:"#F3F4F6"}}>{f.name}</div>
+                  <div style={{font:"400 11px/1.3 'Archivo',sans-serif",color:"#8C939D",marginTop:"3px"}}>{f.srv} · P {f.prot} · G {f.carbs} · L {f.fat}</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"11px",flex:"none"}}>
+                  <span style={{font:"700 14px/1 'Archivo',sans-serif",color:"#F3F4F6"}}>{f.kcal}</span>
+                  <span style={{width:"30px",height:"30px",borderRadius:"999px",background:"#00E08A",color:"#000",display:"flex",alignItems:"center",justifyContent:"center",font:"800 18px/1 'Archivo'"}}>+</span>
+                </div>
+              </button>
+            ))}
+            {S.pickerTab==="lib" && (S.lib.length===0 ? (
+              <div style={{padding:"40px 0",textAlign:"center"}}>
+                <div style={{color:"rgba(255,255,255,0.4)",font:"400 13px/1.6 'Archivo'",marginBottom:"20px"}}>Ta bibliothèque est vide.<br/>Scanne un produit pour l'enregistrer.</div>
+                <button onClick={()=>setState({scannerOpen:true})} style={{border:"1px solid rgba(0,224,138,0.4)",background:"rgba(0,224,138,0.1)",color:"#00E08A",borderRadius:"999px",padding:"12px 22px",font:"700 11px/1 'Archivo'",letterSpacing:"0.08em",cursor:"pointer"}}>SCANNER UN PRODUIT</button>
+              </div>
+            ) : S.lib.map((p,i)=>(
+              <div key={p.id||i} style={{display:"flex",alignItems:"center",gap:"10px",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"12px 6px"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  {p.brand && <div style={{font:"700 8px/1 'Archivo'",letterSpacing:"0.12em",color:"#00E08A",marginBottom:"3px"}}>{p.brand.toUpperCase()}</div>}
+                  <div style={{font:"600 14px/1.2 'Archivo'",color:"#F3F4F6"}}>{p.name}</div>
+                  <div style={{font:"400 10px/1.3 'Archivo',sans-serif",color:"#8C939D",marginTop:"3px"}}>{p.srv} · P {p.prot} · G {p.carbs} · L {p.fat} · {p.kcal} kcal</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"7px",flex:"none"}}>
+                  <button onClick={()=>addItem(p)} style={{width:"30px",height:"30px",borderRadius:"999px",background:"#00E08A",color:"#000",border:"none",cursor:"pointer",font:"800 18px/1 'Archivo'",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                  <button onClick={()=>removeFromLib(p.id)} style={{width:"28px",height:"28px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.12)",background:"transparent",color:"#9aa1ab",cursor:"pointer",font:"400 14px/1 'Archivo'",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                </div>
+              </div>
+            )))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDayDetail = () => {
+    const idx=S.detailIdx;
+    const dd=idx===TODAY_MONTH?{dayType:S.dayType,c:totals}:DAY_DATA[idx];
+    if(!dd) return null;
+    const g=S.goals[dd.dayType], ds=scoreForIdx(idx);
+    const metrics=[{label:"Calories",key:"kcal",unit:"kcal"},...MACROS.map(m=>({label:m.label,key:m.key,unit:m.unit}))].map(x=>{
+      const c=dd.c[x.key], tg=g[x.key], sc=scoreOf(c,tg);
+      return{label:x.label,scoreText:sc,color:scoreColor(sc),barW:`${Math.min(100,Math.round((tg?c/tg:0)*100))}%`,detail:`${c} / ${tg} ${x.unit}`};
+    });
+    const dayNames=["LUNDI","MARDI","MERCREDI","JEUDI","VENDREDI","SAMEDI","DIMANCHE"];
+    const dateLabel2=`${dayNames[(GRID_OFFSET+idx)%7]} ${idx+1} ${MONTHS_FR[TODAY.getMonth()]}`;
+    return (
+      <div onClick={()=>setState({detailIdx:null})} style={{position:"absolute",inset:0,background:"rgba(10,11,12,0.55)",zIndex:30,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+        <div onClick={e=>e.stopPropagation()} className="sheet-in" style={{background:"#161c25",borderRadius:"28px 28px 0 0",maxHeight:"84%",display:"flex",flexDirection:"column"}}>
+          <div style={{flexShrink:0,padding:"14px 20px 0"}}><div style={{width:"38px",height:"4px",borderRadius:"999px",background:"rgba(255,255,255,0.16)",margin:"0 auto"}}/></div>
+          <div className="sa" style={{flex:1,overflowY:"auto",padding:"16px 20px 28px"}}>
+            <div style={{background:"#1b232e",borderRadius:"22px",padding:"22px",color:"#fff"}}>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:"12px"}}>
+                <div>
+                  <div style={{font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.16em",color:"rgba(255,255,255,0.45)"}}>{dateLabel2}</div>
+                  <div style={{display:"inline-block",marginTop:"11px",padding:"5px 11px",borderRadius:"999px",background:"rgba(255,255,255,0.08)",font:"700 9px/1 'Archivo',sans-serif",letterSpacing:"0.08em",color:dd.dayType==="on"?"#00E08A":"rgba(255,255,255,0.6)"}}>
+                    {dd.dayType==="on"?"JOUR ON · ENTRAÎNEMENT":"JOUR OFF · REPOS"}
+                  </div>
+                </div>
+                <button onClick={()=>setState({detailIdx:null})} style={{width:"34px",height:"34px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.15)",background:"transparent",color:"rgba(255,255,255,0.7)",cursor:"pointer",font:"700 14px/1 'Archivo'",flex:"none"}}>✕</button>
+              </div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"3px",marginTop:"18px"}}>
+                <span style={{font:"400 56px/1 'Archivo',sans-serif",color:scoreColor(ds)}}>{ds}</span>
+                <span style={{font:"500 22px/1 'Archivo',sans-serif",color:"rgba(255,255,255,0.4)"}}>%</span>
+              </div>
+              <div style={{font:"800 12px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.04em",color:scoreColor(ds),marginTop:"7px"}}>{scoreLabel(ds)} · score d'atteinte</div>
+            </div>
+            <div style={{...cardDk,padding:"8px 18px",marginTop:"14px"}}>
+              {metrics.map((md,i)=>(
+                <div key={i} style={{padding:"13px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+                  <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:"7px"}}>
+                    <span style={{font:"700 12px/1 'Archivo'",textTransform:"uppercase",letterSpacing:"0.03em",color:"#F3F4F6"}}>{md.label}</span>
+                    <span style={{font:"700 13px/1 'Archivo',sans-serif",color:md.color}}>{md.scoreText}%</span>
+                  </div>
+                  <div style={{height:"8px",borderRadius:"999px",background:"rgba(255,255,255,0.08)",overflow:"hidden"}}>
+                    <div style={{height:"100%",borderRadius:"999px",width:md.barW,background:md.color,transition:"width 500ms cubic-bezier(0.22,0.61,0.36,1)"}}/>
+                  </div>
+                  <div style={{font:"400 10px/1 'Archivo',sans-serif",color:"#BFC4CB",marginTop:"6px"}}>{md.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderChat = () => {
+    const mapMsg=m=>({text:m.text,align:m.role==="user"?"flex-end":"flex-start",bg:m.role==="user"?"#00E08A":"rgba(255,255,255,0.07)",color:m.role==="user"?"#000":"#E7EAEE"});
+    const msgs=S.historyOpen?S.messages:sessionMsgs;
+    const expandIcon=S.chatExpanded?"M7 13l5 5 5-5M7 6l5 5 5-5":"M17 11l-5-5-5 5M17 18l-5-5-5 5";
+    return (
+      <div onClick={()=>setState({chatOpen:false,chatExpanded:false,historyOpen:false})} style={{position:"absolute",inset:0,background:"rgba(8,10,14,0.62)",zIndex:30,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+        <div onClick={e=>e.stopPropagation()} className="sheet-in" style={{background:"#161c25",borderRadius:S.chatExpanded?"0":"24px 24px 0 0",height:S.chatExpanded?"100%":"82%",maxHeight:S.chatExpanded?"100%":"82%",display:"flex",flexDirection:"column",borderTop:"1px solid rgba(255,255,255,0.08)",transition:"height 280ms ease-out, border-radius 280ms ease-out"}}>
+          {/* Chat header */}
+          <div style={{flexShrink:0,padding:"14px 18px 12px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+            <div style={{width:"38px",height:"4px",borderRadius:"999px",background:"rgba(255,255,255,0.16)",margin:"0 auto 14px"}}/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"9px"}}>
+                <span style={{width:"28px",height:"28px",borderRadius:"999px",background:"#00E08A",display:"flex",alignItems:"center",justifyContent:"center",flex:"none"}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.2 5.2L20 9l-4 3.8L17 18l-5-2.8L7 18l1-5.2L4 9l5.8-.8z"/></svg>
+                </span>
+                <div>
+                  <div style={{font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.14em",color:"#F3F4F6"}}>COACH IA</div>
+                  <div style={{font:"400 9px/1.2 'Archivo',sans-serif",color:"#00E08A",marginTop:"3px"}}>À jour des dernières recherches · ISSN · ACSM</div>
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",flex:"none"}}>
+                {S.messages.length>0&&(
+                  <button onClick={()=>setState(s=>({historyOpen:!s.historyOpen}))} style={{width:"32px",height:"32px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.14)",background:"transparent",color:"rgba(255,255,255,0.7)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg>
+                  </button>
+                )}
+                <button onClick={()=>setState(s=>({chatExpanded:!s.chatExpanded}))} style={{width:"32px",height:"32px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.14)",background:"transparent",color:"rgba(255,255,255,0.7)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d={expandIcon}/></svg>
+                </button>
+                <button onClick={()=>setState({chatOpen:false,chatExpanded:false,historyOpen:false})} style={{width:"32px",height:"32px",borderRadius:"999px",border:"1px solid rgba(255,255,255,0.14)",background:"transparent",color:"rgba(255,255,255,0.7)",cursor:"pointer",font:"700 14px/1 'Archivo'"}}>✕</button>
+              </div>
+            </div>
+          </div>
+          {/* Profile memory chips */}
+          {profileChips.length>0&&(
+            <div style={{flexShrink:0,padding:"10px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
+              <span style={{font:"700 8px/1 'Archivo',sans-serif",letterSpacing:"0.14em",color:"rgba(255,255,255,0.35)"}}>EN MÉMOIRE</span>
+              {profileChips.map((pc,i)=><span key={i} style={{font:"600 10px/1 'Archivo',sans-serif",color:"#00E08A",background:"rgba(0,224,138,0.12)",borderRadius:"999px",padding:"4px 9px"}}>{pc}</span>)}
+            </div>
+          )}
+          {/* Messages */}
+          <div ref={chatScrollRef} className="sa" style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:"9px",minHeight:"140px"}}>
+            {S.historyOpen&&<div style={{font:"700 8px/1 'Archivo',sans-serif",letterSpacing:"0.14em",color:"rgba(255,255,255,0.35)",marginBottom:"2px"}}>HISTORIQUE COMPLET</div>}
+            {msgs.length===0&&!S.historyOpen&&(
+              <div style={{margin:"auto",textAlign:"center",color:"rgba(255,255,255,0.4)",font:"400 13px/1.5 'Archivo'",padding:"20px"}}>Pose ta première question —<br/>nutrition, repas, récup…</div>
+            )}
+            {msgs.map((m,i)=>(
+              <div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"86%",background:m.role==="user"?"#00E08A":"rgba(255,255,255,0.07)",color:m.role==="user"?"#000":"#E7EAEE",borderRadius:"14px",padding:"10px 13px",font:"400 13px/1.45 'Archivo'"}}>
+                {m.text}
+              </div>
+            ))}
+            {S.chatLoading&&<div style={{alignSelf:"flex-start",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.55)",borderRadius:"14px",padding:"10px 13px",font:"400 13px/1.45 'Archivo'"}}>Le coach réfléchit…</div>}
+            {/* Option chips (onboarding) */}
+            {!S.historyOpen&&optChips.length>0&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:"8px",marginTop:"4px"}}>
+                {optChips.map((oc,i)=>(
+                  <button key={i} onClick={()=>answerProfile(onboardQ.key,oc.value,oc.label)} style={{border:"1px solid rgba(0,224,138,0.4)",background:"rgba(0,224,138,0.1)",color:"#00E08A",borderRadius:"999px",padding:"9px 14px",cursor:"pointer",font:"600 12px/1 'Archivo',sans-serif"}}>{oc.label}</button>
+                ))}
+              </div>
+            )}
+            {/* Weight advice buttons */}
+            {!S.historyOpen&&S.pendingAdjust!=null&&(
+              <div style={{display:"flex",gap:"8px",marginTop:"6px"}}>
+                <button onClick={()=>applyAdjust(S.pendingAdjust)} style={{flex:1,border:"none",background:"#00E08A",color:"#000",borderRadius:"999px",padding:"11px",cursor:"pointer",font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.06em"}}>Appliquer {S.pendingAdjust>0?"+":""}{S.pendingAdjust} kcal/j</button>
+                <button onClick={()=>setState(s=>({pendingAdjust:null,adviceHandledCount:s.weighIns.length}))} style={{border:"1px solid rgba(255,255,255,0.16)",background:"transparent",color:"rgba(255,255,255,0.6)",borderRadius:"999px",padding:"11px 14px",cursor:"pointer",font:"700 11px/1 'Archivo',sans-serif"}}>Plus tard</button>
+              </div>
+            )}
+          </div>
+          {/* Input / history back */}
+          <div style={{flexShrink:0,padding:"12px 16px 24px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+            {S.historyOpen
+              ? <button onClick={()=>setState({historyOpen:false})} style={{width:"100%",border:"1px solid rgba(255,255,255,0.14)",background:"transparent",color:"#F3F4F6",borderRadius:"999px",padding:"13px",cursor:"pointer",font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.1em"}}>RETOUR À LA DISCUSSION</button>
+              : (
+                <div style={{display:"flex",alignItems:"center",gap:"9px",background:"#1b232e",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"999px",padding:"6px 6px 6px 15px"}}>
+                  <input value={S.chatInput} onChange={e=>setState({chatInput:e.target.value})} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();sendMessage(S.chatInput);}}} placeholder={onboardQ?(onboardQ.type==="number"?`Réponds en ${onboardQ.unit}…`:"Choisis une réponse ci-dessus"):"Écris ton message…"} style={{flex:1,minWidth:0,background:"transparent",border:"none",outline:"none",color:"#F3F4F6",font:"400 13px/1.4 'Archivo',sans-serif"}}/>
+                  <button onClick={()=>sendMessage(S.chatInput)} style={{width:"34px",height:"34px",borderRadius:"999px",border:"none",background:"#00E08A",color:"#000",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flex:"none"}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </button>
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* ── MAIN RENDER ── */
+  return (
+    <div className="phone-frame" style={{position:"relative",width:"402px",height:"858px",background:"#0c0d0f",borderRadius:"54px",padding:"11px",boxShadow:"0 40px 90px rgba(0,0,0,0.6), 0 0 0 2px #2D3137",flex:"none"}}>
+      <div className="phone-inner" style={{position:"relative",width:"100%",height:"100%",background:"linear-gradient(180deg,#1e2632 0%,#12171e 100%)",borderRadius:"44px",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+        {/* Status bar */}
+        <div className="phone-statusbar" style={{flexShrink:0,height:"48px",display:"flex",alignItems:"flex-end",justifyContent:"space-between",padding:"0 30px 6px",background:S.tab==="today"?"#1b232e":"#F3F4F6",color:S.tab==="today"?"#fff":"#101214",transition:"background 200ms"}}>
+          <span style={{font:"700 14px/1 'Archivo',sans-serif",letterSpacing:"0.04em"}}>9:41</span>
+          <div style={{display:"flex",alignItems:"center",gap:"7px"}}>
+            <span style={{font:"700 11px/1 'Archivo',sans-serif",letterSpacing:"0.14em"}}>HYGIE</span>
+            <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+              <rect x="0.5" y="1" width="14" height="10" rx="2.5" stroke="currentColor" strokeOpacity="0.5"/>
+              <rect x="2" y="2.5" width="11" height="7" rx="1.2" fill="currentColor"/>
+              <rect x="15.5" y="4" width="1.6" height="4" rx="0.8" fill="currentColor" fillOpacity="0.5"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="sa" style={{flex:1,overflowY:"auto",overflowX:"hidden",position:"relative"}}>
+          {S.tab==="today"      && renderToday()}
+          {S.tab==="journal"    && renderJournal()}
+          {S.tab==="score"      && renderScore()}
+          {S.tab==="objectifs"  && renderObjectifs()}
+        </div>
+
+        {/* Bottom nav */}
+        <div style={{flexShrink:0,display:"flex",alignItems:"stretch",justifyContent:"space-around",background:"#1b232e",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"9px 6px 26px"}}>
+          {[
+            {key:"today",     label:"AUJOURD'HUI", icon:<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>},
+            {key:"journal",   label:"JOURNAL",     icon:<><path d="M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M9 7h6M9 11h6M9 15h4"/></>},
+            {key:"score",     label:"SCORE",       icon:<><path d="M5 19V11M11 19V5M17 19v-7M21 19H3"/></>},
+            {key:"objectifs", label:"OBJECTIFS",   icon:<><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></>},
+          ].map(t=>(
+            <button key={t.key} onClick={()=>setState({tab:t.key})} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"5px",background:"none",border:"none",cursor:"pointer",padding:"4px 0",color:nc(t.key)}}>
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{t.icon}</svg>
+              <span style={{font:"700 8px/1 'Archivo',sans-serif",letterSpacing:"0.1em"}}>{t.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Overlays */}
+        {S.pickerOpen  && renderFoodPicker()}
+        {S.detailIdx!=null && renderDayDetail()}
+        {S.chatOpen    && renderChat()}
+        {S.scannerOpen && <ScannerOverlay cat={S.pickerCat} onClose={()=>setState({scannerOpen:false})} onSaveLib={addToLib} onAdd={f=>setState(s=>({log:[...s.log,{id:s.nextId,cat:s.pickerCat,...f}],nextId:s.nextId+1,scannerOpen:false,pickerOpen:false}))} />}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<script>
+(function() {
+  var src = document.getElementById('app-jsx').textContent;
+  var compiled = Babel.transform(src, {
+    presets: [['react', {runtime: 'classic', pragma: 'React.createElement', pragmaFrag: 'React.Fragment'}]]
+  }).code;
+  var s = document.createElement('script');
+  s.textContent = compiled;
+  document.body.appendChild(s);
+})();
+</script>
+</body>
+</html>
